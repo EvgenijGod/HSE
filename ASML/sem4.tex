@@ -1,0 +1,208 @@
+%% Данг Куинь Ньы, Коган Александра, декабрь 2020 год
+
+\documentclass[12pt,letterpaper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{lastpage}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[english, russian]{babel}
+
+\hypersetup{%
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+ 
+\renewcommand\lstlistingname{Algorithm}
+\renewcommand\lstlistlistingname{Algorithms}
+\def\lstlistingautorefname{Alg.}
+
+\lstdefinestyle{Python}{
+    language        = Python,
+    frame           = lines, 
+    basicstyle      = \footnotesize,
+    keywordstyle    = \color{blue},
+    stringstyle     = \color{green},
+    commentstyle    = \color{red}\ttfamily
+}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+
+% Edit these as appropriate
+%\newcommand\course{}
+\newcommand\hwnumber{4}                  % <-- homework number
+\newcommand\NetIDa{Данг Куинь Ньы}           % <-- NetID of person #1
+\newcommand\NetIDb{Коган Александра}           % <-- NetID of person #2 (Comment this line out for problem sets)
+
+\pagestyle{fancyplain}
+\headheight 35pt
+\lhead{\NetIDa}
+\lhead{\NetIDa\\\NetIDb}                 % <-- Comment this line out for problem sets (make sure you are person #1)
+\chead{\textbf{\Large Семинар \hwnumber . ЕМ-алгоритм}}
+\rhead{\course \\ \today}
+\lfoot{}
+\cfoot{}
+\rfoot{\small\thepage}
+\headsep 1.5em
+
+\begin{document}
+\textbf{Постановка задачи:} 
+{
+    Сначала вспомним постановку задачи. 
+    Мы хотим максимизировать логарифм функции правдоподобия $\ell(x \mid \theta)$, чтобы найти оценку вектора параметров $\theta$. 
+    Однако бывает так, что эта функция имеет такой вид, что максимизировать сложно (например, если под логарифмом оказывается сумма). 
+    Идея EM-алгоритма состоит в том, чтобы ввести латентные переменные $z$ и использовать совместное распределение $p(X, Z)$ для нахождения $\hat{\theta}$.
+}\\
+
+\textbf{ЕМ-алгоритм в общем виде:}
+{
+    \begin{itemize}
+        \item \textbf{Инициализация:} задать начальные значения $\theta^{old}$
+        \item \textbf{E.1-шаг:} найти условное распределение латентных переменных $p(Z \mid X, \theta^{old})$
+        \item \textbf{E.2-шаг:} построить функцию $Q(\theta, \theta^{old}) = \mathbb{E}_{Z \mid X, \theta}(\ell(x, z \mid \theta) \mid x, \theta^{old})$
+        \item \textbf{M-шаг:} максимизировать $Q$ по $\theta$
+        \item Далее повторять E- и M-шаги до сходимости \footnote{например, критерием остановки м.б. $|Q_{t} - Q_{t-1}| < 1\mathrm{e}{-4}$}.
+    \end{itemize}\\
+}
+\hypertarget{foo}{\textbf{Обоснование ЕМ-алгоритма:}}
+{
+    Для обоснования ЕМ-алгоритма и понимания обозначений рассмотрим пример: 
+    
+    Пусть $X_1, X_2, \ldots, X_n$ $\sim f(x \mid \theta)$, где $f$ -- какая-то функция плотности, $\theta$ -- вектор неизвестных параметров этой плотности.
+    
+    Пусть латентные переменные принимают всего два значения: $Z \in \{0, 1\}$ -- с вероятностями $\mathbb{P}(Z = 0) = p_1$, $\mathbb{P}(Z = 1) = 1-p_1$.
+    Заметим, что 
+    $$\ell(x \mid \theta) = \sum\limits_{i=1}^{n} \ln f(x_i \mid \theta) = \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j)\ln f(x_i \mid \theta) = \left[\mathbb{P}(Z = j \mid x_i, \theta) = \frac{f(x_i,Z=j \mid \theta)}{f(x_i \mid \theta)}\right]\footnote{по формуле условной вероятности}=$$
+
+    $$=\sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j)\ln \dfrac{f(x_i, Z = j \mid \theta)}{\mathbb{P}(Z = j \mid x_i, \theta)}= \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j)\ln \dfrac{f(x_i, Z = j \mid \theta) \mathbb{P}(Z = j)}{\mathbb{P}(Z = j \mid x_i, \theta)\mathbb{P}(Z = j)} = $$
+    
+    $$= \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j) \ln \dfrac{f(x_i, Z = j \mid \theta)}{\mathbb{P}(Z = j)} + \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j) \ln \dfrac{\mathbb{P}(Z = j)}{\mathbb{P}(Z = j \mid x_i, \theta)} =$$
+    
+    $$= M(\mathbb{P}(Z = j), \theta) + D_{KL}[\mathbb{P}(Z = j) || \mathbb{P}(Z = j \mid x_i, \theta)]$$
+    
+    Так как $D_{KL} \geq 0$, то $M(\mathbb{P}(Z = j), \theta)$ является нижней оценкой на логарифм правдоподобия. Идея EM-алгоритма состоит в том, чтобы поочерёдно максимизировать $M(\mathbb{P}(Z = j), \theta)$ по $\mathbb{P}(Z = j)$ (на E-шаге) и по $\theta$ (на M-шаге).
+    \begin{itemize}
+        \item \textbf{E-шаг}
+        Максимизируем $M(\mathbb{P}(Z = j), \theta)$ по $\mathbb{P}(Z = j)$.
+    
+        Так как $\ell(x | \theta)$ не зависит от $\mathbb{P}(Z = j)$, то максимум $M(\mathbb{P}(Z = j), \theta)$ по $\mathbb{P}(Z = j)$ будет достигнут, когда $D_{KL}$ минимальна. 
+    
+        По определению $D_{KL} \geq 0$, минимальная $D_{KL}(A || B)$ = 0 достигается, когда $A=B$. Из этого делаем вывод, что на E-шаге мы устанавливаем
+    
+        $$ \mathbb{P}(Z = j) := \mathbb{P}(Z = j \mid x_i, \theta^{old}).$$
+        \item \textbf{М-шаг}
+        Максимизируем $M(\mathbb{P}(Z = j), \theta)$ по $\theta$. Распишем $M$ ещё раз:
+    
+        $$M = \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j) \ln \dfrac{f(x_i, Z = j \mid \theta)}{\mathbb{P}(Z = j)}$$
+        Заметим, что знаменатель подлогарифмического выражения не зависит от $\theta$. Выбросим его\footnote{Функция будет максимизироваться по $\theta$, поэтому независящий от $\theta$ знаменатель не нужно учитывать} и заменим $\mathbb{P}(Z = j)$ на результат, полученный нами на E-шаге:
+        $$
+        M = \sum\limits_{i=1}^{n} \sum\limits_{j=0}^{1} \mathbb{P}(Z = j \mid x_i, \theta^{old}) \ln f(x_i, Z = j \mid \theta) = \sum\limits_{i=1}^{n} \mathbb{E}_{Z \mid x_i, \theta^{old}}(\ln f(x_i, Z = j \mid \theta)) := Q(\theta, \theta^{old}).
+        $$
+        Далее мы максимизируем $Q$ по по $\theta$, обновляем $\theta$ на аргмаксимум $Q$, и возвращаемся к E-шагу.
+    \end{itemize}
+}
+\textbf{Обозначения:}\\
+{
+    Теперь соотнесём обозначения из общей постановки EM-алгоритма с теми, что мы получили в примере.
+    \begin{itemize}
+        \item $p(Z)$ -- это безусловное распределение $Z$. По сути, это массив размера $1\times k$, где $k$ -- число значений $Z$.
+        \item $p(Z \mid X, \theta^{old})$ -- это условное распределение $Z$ при условии выборки. По сути, это массив размера $n\times k$, где $n$ -- размер выборки, $k$ -- число значений $Z$. Каждая строчка есть вектор вероятностей того, что на данном наблюдении $Z$ равно соответсвующему значению.
+        \item $\mathbb{E}_{Z \mid X, \theta}(\cdot)$ -- это сумма матожиданий $\sum\limits_{i=1}^{n} \mathbb{E}_{Z \mid x_i, \theta}(\cdot)$ по всем наблюдениям выборки.
+        \item $p(\cdot)$ -- распределение того, что стоит в скобках. Эта функция может оказаться функцией вероятности или функцией плотности в зависимости от контекста.
+    \end{itemize}
+}
+\section*{Задача о кластеризации (разделение смесей)}
+{
+    Пусть мы точно знаем, что наблюдения принадлежат одному из двух кластеров. Пусть в первом кластере наблюдения берутся из нормального $\mathcal{N}(\mu_1, \sigma_1^2)$ распределения, а во втором -- из нормального $\mathcal{N}(\mu_2, \sigma_2^2)$ распределения. Предположим, что все наблюдения независимы, и вероятность того, что наблюдение относится к первому кластеру, равна $p_1$.
+}
+\subsection*{Решение:}
+{
+    \begin{enumerate}
+        \item \textbf{Определение латентных переменных:} 
+        {
+            $z \in \{1, 2\}$ -- номер кластера. Вспомним, что у нас есть обозначение $p_1 = \mathbb{P}(z = 1)$ -- вероятность отнести наблюдение к первому кластеру.
+        }
+        
+        \item \textbf{Е-1 шаг:} 
+        {
+            Найти условное распределение латентных переменных $p(Z \mid X, \theta^{old})$. Для данной задачи это означает, что мы должны получить массив $n\times2$ (n наблюдений, 2 значения $z$). Нам достаточно найти только один столбец массива -- этот столбец будет размера $n\times1$ (то есть вероятность того, что $z = 1$) -- потому что второй столбец определяется однозначно как ($1 - $ первый столбец).
+            По формуле условной вероятности:
+            $$p(z \mid x, \theta^{old}) = \dfrac{p(z, x \mid \theta^{old})}{p(x \mid \theta^{old})}$$
+            и $$p(x \mid z, \theta^{old}) = \dfrac{p(x, z \mid \theta^{old})}{p(z)}$$
+            
+            Отметим, что маленькой буквой $p$ обозначается распределение. Мы можем его пока не знать. В конкретных случаях $p$ может быть функцией плотности для непрерывной случайной величины или функцией вероятности для дискретных элементов.
+            
+            Тогда
+            $$\mathbb{P}(z_i = 1 \mid x_i, \theta^{old}) = \dfrac{p(z_i = 1, x_i \mid \theta^{old})}{f(x_i \mid \theta^{old})} $$
+            
+            Заметим, что для данной задачи мы предполагаем, что $x$ пришли из нормальных распределений, следовательно в знаменателе $p$ заменяется на $f$ - функцию плотности. В числителе пока остается $p$, потому что конкретный вид распределения пока неизвестен. Конкретные значения $z$ неизвестны (мы сами их придумали и не наблюдаем), поэтому числитель надо преобразовать, перейдя к чему-то известному. Для этого снова воспользуемся формулой условной вероятности, написанной выше: $p(x \mid z, \theta^{old}) = \dfrac{p(x, z \mid \theta^{old})}{p(z)}$.\\
+            Из нее получим, что $p(x, z = 1 \mid \theta^{old}) = p(x \mid z = 1, \theta^{old})\mathbb{P}(z = 1)$, где оба множителя мы знаем: $p(x \mid z, \theta^{old})$ - это функция плотности, а $\mathbb{P}(z=1) = p_1$ было определено выше. Получаем числитель. Чтобы посчитать знаменатель, воспользуемся знанием о том, что $x$ приходят из 2х распределений и распишем по формуле полной вероятности. Получим:
+            
+            $$\mathbb{P}(z_i = 1 \mid x_i, \theta^{old}) = \dfrac{f(x_i \mid z_i = 1, \theta^{old})p_1}{p_1f(x_i \mid z_i = 1, \theta^{old}) + (1-p_1)f(x_i \mid z_i = 2, \theta^{old})}$$
+        }
+        
+        \item \textbf{E-2 шаг: } 
+        {
+            Постройте функцию $Q(\theta, \theta^{old}) = \mathbb{E}_{Z \mid X, \theta}(\ell(x, z \mid \theta) \mid x, \theta^{old})$.
+            По формуле условной вероятности:
+            $$p(x, z \mid \theta) = p(x \mid \theta, z) \cdot p(z)$$
+            Легко видеть, что 
+            
+            $$Q(\theta, \theta^{old}) = \sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old})[\ln f(x_i \mid \theta) + \ln p_1] + (1 - \mathbb{P}(z_i = 1 \mid x, \theta^{old}))[\ln f(x_i \mid \theta) + \ln(1-p_1)]$$
+            
+             Подробно об этом есть в \hyperlink{foo}{Обосновании ЕМ-алгоритма}. Если коротко объяснить формулу: матожидание берется от логарифма совместного правдоподобия $x,z$, его получаем по формуле условной вероятности, поэтому возникают $[\ln f(x_i \mid \theta) + \ln p_1]$ и $[\ln f(x_i \mid \theta) + \ln(1-p_1)]$. 
+            Матожидание берется по распределению латентных переменных и $\theta^{old}$, поэтому возникают $\mathbb{P}(z_i = 1 \mid x, \theta^{old})$ и $(1 - \mathbb{P}(z_i = 1 \mid x, \theta^{old}))$.
+        }
+        
+        \item \textbf{М-шаг:} 
+        {
+            Выведем формулы для максимизации $Q$.
+            
+            Для этого надо найти производные $Q$ по параметрам $\theta$ ($\mu_1, \mu_2, \sigma^2_1,\sigma^2_2, p_1)$, приравнять производные к 0, найти точки экстремума и доказать, что это точки максимума (для этого рассмотреть вторые производные $Q$ в этих точках)
+            Чтобы не загружать конспект, опустим проверку вторых производных.
+            
+            $$Q'_{\mu_1} = \sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old}) \dfrac{(x_i - \mu_1)}{\sigma_1^2}$$
+            $$\mu_1^{new} = \dfrac{\sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old}) x_i}{\sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old})}$$
+            
+            Аналогично,
+            $$\mu_2^{new} = \dfrac{\sum\limits_{i=1}^{n} (1 - \mathbb{P}(z_i = 1 \mid x, \theta^{old})) x_i}{\sum\limits_{i=1}^{n} (1 - \mathbb{P}(z_i = 1 \mid x, \theta^{old}))}$$
+            
+            Далее:
+            
+            $$Q'_{\sigma_1^2} = \sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old}) \left(-\dfrac{1}{2\sigma^2_1} + \dfrac{1}{2}\dfrac{(x_i - \mu)^2}{\sigma_1^4}\right)$$
+            $$\sigma_1^{2, new} = \dfrac{\sum\limits_{i=1}^{n} (x_i - \mu)^2 \mathbb{P}(z_i = 1 \mid x, \theta^{old})}{\sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old})}$$
+            Аналогично,
+            $$\sigma_2^{2, new} = \dfrac{\sum\limits_{i=1}^{n} (x_i - \mu)^2 (1-\mathbb{P}(z_i = 1 \mid x, \theta^{old}))}{\sum\limits_{i=1}^{n} (1-\mathbb{P}(z_i = 1 \mid x, \theta^{old}))}$$
+            
+            Далее:
+            
+            $$Q'_{p_1} = \sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old}) \dfrac{1}{p_1} - (1 - \mathbb{P}(z_i = 1 \mid x, \theta^{old})) \dfrac{1}{1 - p_1}$$
+            
+            $$p_1^{new} = \dfrac{\sum\limits_{i=1}^{n} \mathbb{P}(z_i = 1 \mid x, \theta^{old})}{n}$$
+            
+            Интуиция за полученными формулами: 
+            \begin{itemize}
+                \item  $\mu_1$ входит только в функцию плотности нормального распределения, поэтому оценка $\mu_1$ будет очень похожа на оценку маскимального правдоподобия для $\mu_1$, только скорректированная на сумму вероятностей латентных переменных. Для $\mu_2$ аналогично.
+            
+                \item Оценка $\sigma_1^2$ тоже выглядит, как оценка максимального правдоподобия, скорректированная относительно $z$. Для $\sigma_2^2$ аналогично.
+                
+                \item Для $p_1$ оценка получилась вполне логичной - средняя вероятность того, что латентная переменная принимает значение 1.
+            \end{itemize}
+            $\mu_1^{new}, \mu_2^{new}, \sigma_1^{2,new}, \sigma_2^{2,new}, p_1^{new}$ - новые значения параметров после одного шага алгоритма.
+            
+            После этого $\theta^{old} := [\mu_1^{new}, \mu_2^{new}, \sigma_1^{2,new}, \sigma_2^{2,new}, p_1^{new}]$ и шаг повторяется. (Вновь считаются $\mathbb{P}(z_i = 1 \mid x_i, \theta^{old})$, пересчитываются $\mu_1^{new}, \mu_2^{new}, \sigma_1^{2,new}, \sigma_2^{2,new}, p_1^{new}$)
+            
+            Условиями остановки алгоритма можно установить, например, максимальное количество шагов, или минимальную разницу  $Q$ на 2х последовательных шагах алгоритма, или их комбинацию, или что-то еще.\footnote{Пример реализации и работы ЕМ-алгоритма см. в кодспекте семинара}
+        }
+    \end{enumerate}
+}
+\end{document}
