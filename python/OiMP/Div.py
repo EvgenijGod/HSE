@@ -1,0 +1,5 @@
+A = int(input())
+B = int(input())
+result = 'YES' * (((A // B) + 1 - (A % B)) // ((A // B) + 1))
+result += 'NO' * ((((A % B) + 2) // ((A % B) + 1)) % 2)
+print(result)

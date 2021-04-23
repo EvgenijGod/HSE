@@ -1,0 +1,5 @@
+priceRuble = int(input())
+priceCopeck = int(input())
+quantityProduct = int(input())
+price = quantityProduct * (priceRuble * 100 + priceCopeck)
+print(price // 100, price % 100)
